@@ -12,17 +12,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 【关键修改】使用 GitHub 官方动作自动配置 Gradle 环境
-      # 这一步会自动处理 Gradle 版本，即使没有 gradlew 也能尝试运行
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      # 2. 设置 Java 环境 (很多老项目需要 Java 11，新项目需要 17)
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
 
-      # 3. 编译 APK
-      # 注意：这里直接用 gradle 命令，而不是 ./gradlew
+      # 3. 安装 Android SDK (这是关键，防止找不到 Android 版本)
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 4. 授予权限 (尝试创建 gradlew 如果不存在，或者修复权限)
+      - name: Make gradlew executable
+        run: |
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+          else
+            echo "gradlew not found, relying on system gradle"
+          fi
+
+      # 5. 编译 (先尝试用 gradlew，如果不行再用 gradle)
       - name: Build Debug APK
-        run: gradle assembleDebug
+        run: |
+          if [ -f "gradlew" ]; then
+            ./gradlew assembleDebug --stacktrace
+          else
+            gradle assembleDebug --stacktrace
+          fi
 
-      # 4. 上传到 Release
+      # 6. 上传到 Release
       - name: Upload to Release
         uses: "ncipollo/release-action@v1"
         with:
@@ -30,5 +49,5 @@ jobs:
           artifacts: "app/build/outputs/apk/debug/*.apk"
           name: "Auto Build ${{ github.run_number }}"
           tag: "build-${{ github.run_id }}"
-          replacesArtifacts: true
           allowUpdates: true
+          replacesArtifacts: true
