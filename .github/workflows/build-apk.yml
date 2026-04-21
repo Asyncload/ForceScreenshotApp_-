@@ -27,8 +27,8 @@ jobs:
       #run: ./gradlew assembleDebug
 
     - name: 上传到 Release
-        uses: ncipollo/release-action@v1
-        with:
+      uses: ncipollo/release-action@v1
+      with:
           # 授权令牌（GitHub自动提供，无需修改）
           token: ${{ secrets.GITHUB_TOKEN }}
           
