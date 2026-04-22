@@ -29,9 +29,6 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Clean project
-        run: ./gradlew clean
-
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
