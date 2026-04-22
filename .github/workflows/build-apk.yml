@@ -23,17 +23,20 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
+      - name: Fix gradlew line endings
+        run: sed -i 's/\r$//' gradlew
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build with Gradle
-        run: ./gradlew :app:assembleDebug
+      - name: Clean project
+        run: ./gradlew clean
 
-      # 6. 上传到 Release
-      - name: Upload to Release
-        uses: ncipollo/release-action@v1
+      - name: Build Release APK
+        run: ./gradlew assembleRelease
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "app/build/outputs/apk/**/*.apk"
-          name: "Auto Build ${{ github.run_number }}"
-          tag: "build-${{ github.run_number }}"
+          name: app-release
+          path: app/build/outputs/apk/release/*.apk
