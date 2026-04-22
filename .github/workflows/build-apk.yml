@@ -30,11 +30,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
-      # 5. 编译 APK
-      # 注意：这里使用的是 'gradle' 而不是 './gradlew'
-      - name: Build Debug APK
-        #run: gradle :app:assembleDebug
-        run: gradle :XQ_qzjt:assembleDebug
+      - name: Fix gradlew line endings
+        run: sed -i 's/\r$//' gradlew
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
 
       # 6. 上传到 Release
       - name: Upload to Release
