@@ -1,9 +1,9 @@
 plugins {
-    id 'com.android.application'
+    id 'com.example.forcescreenshot'
 }
 
 android {
-    namespace 'com.dszsu.tss'
+    namespace 'com.example.forcescreenshot'
     compileSdk 34
     
     defaultConfig {
