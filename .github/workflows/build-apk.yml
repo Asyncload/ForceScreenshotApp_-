@@ -34,6 +34,6 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: "app/build/outputs/apk/debug/*.apk"
+          artifacts: "app/build/outputs/apk/**/*.apk"
           name: "Auto Build ${{ github.run_number }}"
           tag: "build-${{ github.run_number }}"
