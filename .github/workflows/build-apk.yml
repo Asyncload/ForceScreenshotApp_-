@@ -33,7 +33,8 @@ jobs:
       # 5. 编译 APK
       # 注意：这里使用的是 'gradle' 而不是 './gradlew'
       - name: Build Debug APK
-        run: gradle :app:assembleDebug
+        #run: gradle :app:assembleDebug
+        run: gradle :XQ_qzjt:assembleDebug
 
       # 6. 上传到 Release
       - name: Upload to Release
