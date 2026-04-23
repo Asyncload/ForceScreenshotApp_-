@@ -4,7 +4,8 @@
     <!-- 声明 LSPosed 模块 -->
     <application
         android:label="ForceScreenshot"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="res/ic_launcher.png"
+        android:roundIcon="res/ic_launcher.png">
         
         <!-- 主 Activity -->
         <activity android:name=".MainActivity"
