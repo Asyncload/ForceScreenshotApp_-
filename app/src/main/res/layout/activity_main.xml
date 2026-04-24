@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 最简单线性布局，不会爆红、不需要复杂约束 -->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"   <!-- 宽度铺满屏幕 -->
-    android:layout_height="match_parent"  <!-- 高度铺满屏幕 -->
-    android:gravity="center"              <!-- 内容居中显示 -->
-    android:orientation="vertical">      <!-- 控件垂直排列 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <!-- 页面文字 -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="我的模块主页"
-        android:textSize="20sp"/>
+        android:text="OK"/>
 
 </LinearLayout>
