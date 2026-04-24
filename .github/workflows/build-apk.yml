@@ -1,53 +1,52 @@
 name: Build APK
 
-# 触发条件：main分支推送时自动构建，也支持手动触发
+# 触发条件：支持手动触发
 on:
-  #push: 
-    #branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
-    # 使用Ubuntu系统作为构建环境
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 拉取你的代码仓库
+      # 1. 拉取代码
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 配置JDK 17环境（Gradle和Android编译需要）
+      # 2. 配置JDK 17
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 配置Android SDK环境（用于编译APK）
+      # 3. 配置Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
-      # 4. 修复Windows换行符问题，避免gradlew脚本执行报错
+      # 4. 修复Windows换行符问题
       - name: Fix gradlew line endings
         run: sed -i 's/\r$//' gradlew
 
-      # 5. 给gradlew脚本添加执行权限
+      # 5. 给gradlew添加执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # 6. 编译Release版本APK（生成未签名的app-release-unsigned.apk）
+      # ------------------- 关键修改点 -------------------
+      # 6. 【合并清理+构建】仅执行一次，避免重复构建
       - name: Build Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew clean assembleRelease --no-build-cache
+      # -------------------------------------------------
 
       # --- 签名流程开始 ---
-      # 7. 生成临时签名密钥（仅本次构建使用，不影响你的项目）
+      # 7. 生成临时签名密钥
       - name: 生成临时签名密钥
         run: |
           keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 \
           -alias myalias -storepass password789 -keypass password789 \
           -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
 
-      # 8. 使用jarsigner工具对APK进行签名（直接写死你确认的文件名）
+      # 8. 用jarsigner签名APK
       - name: 用jarsigner签名APK
         run: |
           jarsigner -verbose \
@@ -58,43 +57,31 @@ jobs:
             app/build/outputs/apk/release/app-release-unsigned.apk \
             myalias
 
-      # 9. 自定义APK文件名，自动带上版本号和日期and日期
+      # 9. 自定义APK文件名
       - name: Rename APK
         run: |
-          # 从build.gradle中读取versionName
           VERSION=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
-          # 获取当前日期（格式：YYYY-MM-DD）
           DATE=$(date +%Y-%m-%d)
-          # 获取当前时间（带冒号格式：HH:MM:SS）
           TIME=$(date +%H:%M:%S)
           
-          # 关键：将变量导出到GitHub Actions环境变量，供后续步骤使用
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "DATE=$DATE" >> $GITHUB_ENV
           echo "BUILD_TIME=$TIME" >> $GITHUB_ENV
           
-          # 自定义APK文件名（时间部分也可以不带冒号，避免文件名特殊字符）
           NEW_NAME="X-screen_v${VERSION}_${DATE}.apk"
-          # 重命名签名后的APK（确认你的源文件路径正确）
           mv app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/$NEW_NAME
-          # 导出APK路径变量
           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
       
-      # 发布到GitHub Release
+      # 10. 发布到GitHub Release
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
         with:
-          # Release名称（带构建号和版本号，更清晰）
           name: "X-screen-v${{ github.run_number }} (v${{ env.VERSION }})"
-          # 上传的APK文件路径
           files: ${{ env.APK_FILE }}
-          # 标签名（和应用版本号对应，规范格式）
           tag_name: "v${{ env.VERSION }}"
-          # Release说明（带完整日期+带冒号时间，缩进完全规范）
           body: |
             ✅ 编译完成！
             📱 应用版本: v${{ env.VERSION }}
             📅 编译时间: ${{ env.DATE }} ${{ env.BUILD_TIME }}
             📦 构建编号: ${{ github.run_number }}
-          # 允许覆盖已存在的文件（用于更新同版本Release）
           overwrite_files: true
