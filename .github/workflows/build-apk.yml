@@ -60,7 +60,7 @@ jobs:
           echo "BUILD_TIME=$TIME" >> $GITHUB_ENV
 
           # 重命名APK
-          NEW_NAME="X-screen_v${NEW_VER}_${DATE}.apk"
+          NEW_NAME="X-screen_v${versionName}_${DATE}.apk"
           mv app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/$NEW_NAME
           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
 
