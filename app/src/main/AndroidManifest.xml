@@ -4,7 +4,7 @@
 
     <!-- 声明 LSPosed 模块 -->
     <application
-        android:label="X截图"
+        android:label="X-screen"
         tools:ignore="HardcodedDebugMode,MissingApplicationIcon">
         
         
