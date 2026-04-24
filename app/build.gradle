@@ -3,6 +3,7 @@ plugins {
     id 'com.android.application'
 }
 
+
 // Android项目核心配置块
 android {
     // 命名空间（Gradle 新版必须，替代旧版package声明）
