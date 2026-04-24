@@ -3,7 +3,7 @@ name: Build APK
 # 触发条件：main分支推送时自动构建，也支持手动触发
 on:
   push: 
-    branches: [ main ]
+    #branches: [ main ]
   workflow_dispatch:
 
 jobs:
