@@ -40,14 +40,21 @@ jobs:
            keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password789 -keypass password789 -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
       - name: 签名 APK
         run: |
-           apksigner sign --ks my-release-key.jks --ks-pass pass:password789 --key-pass pass:password789 --alias myalias app/build/outputs/apk/release/*.apk
+           apksigner sign --ks my-release-key.jks --ks-pass pass:password789 --key-pass pass:password789 --alias myalias app/build/outputs/apk/release/app-release.apk
 
+      # 动态改名
+      - name: Rename APK
+        run: |
+           VERSION=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+           DATE=$(date +%Y%m%d)
+           NEW_NAME="v${VERSION}_${DATE}.apk"
+           mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/$NEW_NAME
+           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
+      
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
         with:
-          name: X-screen
-          tag_name: X-screen-v${{ github.run_number }}  # 用构建号作为版本标签，每次构建都会自动生成新标签
-          
-          files: |
-            app/build/outputs/apk/release/*.apk
-            overwrite_files: true
+          name: X-screen-v${{ github.run_number }}  # 用构建号作为版本标签，每次构建都会自动生成新标签
+          files: ${{ env.APK_FILE }}
+          tag_name: latest
+          overwrite_files: true
