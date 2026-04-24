@@ -5,11 +5,13 @@
     <!-- 声明 LSPosed 模块 -->
     <application
         android:label="X-screen"
-        tools:ignore="HardcodedDebugMode,MissingApplicationIcon">
+        
+        tools:ignore="HardcodedDebugMode,MissingApplicationIcon"  
+        android:requestLegacyExternalStorage="true"> <!-- 只对安卓10有用 -->
         
         
         <!-- 主 Activity -->
-        <activity android:name="MainActivity"
+        <activity android:name="com.lbxq.screen.MainActivity"
                   android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -19,7 +21,7 @@
 
         <!-- 无障碍服务 -->
         <service
-            android:name="XscreenService"
+            android:name="com.lbxq.screen.XscreenService"
             android:label="截图服务"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="false">
@@ -31,7 +33,7 @@
         <!-- LSPosed 模块声明 -->
         <meta-data
             android:name="de.robv.android.xposed.module"
-            android:value="true" />
+            android:value="on" />
         <meta-data
             android:name="xposeddescription"
             android:value="强制截图模块" />
