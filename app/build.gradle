@@ -1,69 +1,70 @@
+// 声明这是一个Android应用模块
 plugins {
     id 'com.android.application'
 }
 
+// Android项目核心配置块
 android {
+    // 命名空间（Gradle 新版必须，替代旧版package声明）
     namespace 'com.lbxq.screen'
+
+    // 编译SDK版本（对应Android 15，API 35）
     compileSdk 35
-    
+
+    // 默认配置：所有构建变体共享的基础设置
     defaultConfig {
+        // 应用包名（必须和你在AndroidManifest.xml里的一致）
         applicationId "com.lbxq.screen"
-        minSdk 24          
+
+        // 最低兼容系统版本：Android 8.0（API 26）
+        minSdk 26
+
+        // 目标系统版本：Android 15（API 35）
         targetSdk 35
-        versionCode 11
-        versionName "1.1"
-      
-        
-        
-        ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a'
-            
-            
-        }
+
+        // 版本号（数字，用于系统识别更新）
+        versionCode 1
+        // 版本名（字符串，给用户看的）
+        versionName "1.0"
     }
-    
+
+    // 构建类型：release（发布版）和debug（调试版）的配置
     buildTypes {
+        // release 构建配置（最终打包用的）
         release {
-            
-            minifyEnabled true
-            shrinkResources true
-            
-            crunchPngs true
-            
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            
-            
-            
+            // 不开启代码混淆（true会压缩代码，模块开发初期建议false，避免Hook失效）
+            minifyEnabled false
+            // 不开启资源压缩（同上，开发初期建议false）
+            shrinkResources false
+            // 混淆规则文件（默认+自定义，这里只用默认的）
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
         }
+
+        // debug 构建配置（调试用）
         debug {
+            // 给调试版包名加后缀，避免和正式版冲突
             applicationIdSuffix ".debug"
-            
+            // 调试版不开启混淆和资源压缩
             minifyEnabled false
             shrinkResources false
-            crunchPngs false
         }
     }
-    
+
+    // 编译选项：指定JDK版本
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-    
-    
-    packagingOptions {
-        exclude 'META-INF/**'
-        exclude 'kotlin/**'
-        exclude '/*.txt'
-        exclude '/*.properties'
+        // 源代码使用Java 17语法
+        sourceCompatibility JavaVersion.VERSION_17
+        // 生成的字节码兼容Java 17
+        targetCompatibility JavaVersion.VERSION_17
     }
 }
-    
+
+// 依赖配置块
+dependencies {
+    // Xposed/LSPosed 模块核心API（compileOnly表示仅编译时依赖，不打包进APK）
+    compileOnly 'de.robv.android.xposed:api:82'
+    compileOnly 'de.robv.android.xposed:api-sdk:82'
+
+    // AndroidX AppCompat 依赖，用来支持你的MainActivity和AndroidX特性
+    implementation 'androidx.appcompat:appcompat:1.7.0'
 }
-    configurations.all {
-        resolutionStrategy {
-        // 强制使用 1.8.22 版本（或者你项目中使用的最新版）
-        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
-        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
-    }
-    }
