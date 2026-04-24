@@ -4,10 +4,10 @@
 
     <!-- 声明 LSPosed 模块 -->
     <application
-        android:label="X-screen"
-        
+        android:label="X-screen" 
+    
         tools:ignore="HardcodedDebugMode,MissingApplicationIcon"  
-        android:requestLegacyExternalStorage="true"> <!-- 只对安卓10有用 -->
+        android:requestLegacyExternalStorage="true" /> <!-- 只对安卓10有用 -->
         
         
         <!-- 主 Activity -->
@@ -40,6 +40,10 @@
         <meta-data
             android:name="xposedminversion"
             android:value="101" />
+         <!-- ✅ API 101 必须：声明模块入口类 -->
+         <meta-data
+             android:name="xposedmodule"
+             android:value="com.lbxq.screen.XscreenModule" />
     </application>
 
     <!-- 权限声明 -->
