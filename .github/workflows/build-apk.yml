@@ -1,61 +1,86 @@
 name: Build APK
 
+# 触发条件：main分支推送时自动构建，也支持手动触发
 on:
- push: 
-   branches: [ main ]
- workflow_dispatch:
+  push: 
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
+    # 使用Ubuntu系统作为构建环境
     runs-on: ubuntu-latest
 
     steps:
-      # 1. 下载代码
+      # 1. 拉取你的代码仓库
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. 设置 JDK 17
+      # 2. 配置JDK 17环境（Gradle和Android编译需要）
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      # 3. 设置 Android SDK
+      # 3. 配置Android SDK环境（用于编译APK）
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         
+      # 4. 修复Windows换行符问题，避免gradlew脚本执行报错
       - name: Fix gradlew line endings
         run: sed -i 's/\r$//' gradlew
 
+      # 5. 给gradlew脚本添加执行权限
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # 6. 编译Release版本APK（生成未签名的app-release.apk）
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      # --- 新增签名步骤 ---
-      
+      # --- 签名流程开始 ---
+      # 7. 生成临时签名密钥（仅本次构建使用，不影响你的项目）
       - name: 生成临时签名密钥
         run: |
-           keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password789 -keypass password789 -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
-      - name: 用 jarsigner 签名 APK
-        run: |
-           jarsigner -verbose -keystore temp-key.jks -storepass temp123 -keypass temp123 -signedjar app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/app-release.apk tempalias
+          keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 \
+          -alias myalias -storepass password789 -keypass password789 \
+          -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
 
-      # 动态改名
+      # 8. 使用jarsigner工具对APK进行签名
+      - name: 用jarsigner签名APK
+        run: |
+          jarsigner -verbose \
+            -keystore my-release-key.jks \
+            -storepass password789 \
+            -keypass password789 \
+            -signedjar app/build/outputs/apk/release/app-release-signed.apk \
+            app/build/outputs/apk/release/app-release.apk \
+            myalias
+
+      # 9. 自定义APK文件名，自动带上版本号和日期
       - name: Rename APK
         run: |
-           VERSION=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
-           DATE=$(date +%Y%m%d)
-           NEW_NAME="X-screenv${VERSION}_${DATE}.apk"
-           mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/$NEW_NAME
-           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
+          # 从build.gradle中读取versionName
+          VERSION=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+          # 获取当前日期，格式为YYYYMMDD
+          DATE=$(date +%Y%m%d)
+          # 自定义文件名格式
+          NEW_NAME="X-screen_v${VERSION}_${DATE}.apk"
+          # 用签名后的文件改名
+          mv app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/$NEW_NAME
+          # 将文件名存入环境变量，供后续步骤使用
+          echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
       
+      # 10. 将签名后的APK发布到GitHub Release
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
         with:
-          name: X-screen-v${{ github.run_number }}  # 用构建号作为版本标签，每次构建都会自动生成新标签
+          # Release页面的名称，自动带上构建号
+          name: X-screen-v${{ github.run_number }}
+          # 上传的文件路径（使用上面步骤设置的环境变量）
           files: ${{ env.APK_FILE }}
+          # 标签名，每次都会覆盖更新
           tag_name: latest
+          # 允许覆盖已存在的文件
           overwrite_files: true
