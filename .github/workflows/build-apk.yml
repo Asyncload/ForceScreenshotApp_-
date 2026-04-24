@@ -42,7 +42,7 @@ jobs:
            keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 -alias myalias -storepass password789 -keypass password789 -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
       - name: 用 jarsigner 签名 APK
         run: |
-           jarsigner -verbose -keystore temp-key.jks -storepass temp123 -keypass temp123 \ -signedjar app/build/outputs/apk/release/app-release-signed.apk \ app/build/outputs/apk/release/app-release.apk tempalias
+           jarsigner -verbose -keystore temp-key.jks -storepass temp123 -keypass temp123 \-signedjar app/build/outputs/apk/release/app-release-signed.apk \app/build/outputs/apk/release/app-release.apk tempalias
 
       # 动态改名
       - name: Rename APK
