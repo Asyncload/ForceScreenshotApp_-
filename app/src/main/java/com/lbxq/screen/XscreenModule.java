@@ -4,18 +4,13 @@ import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 
 public class XscreenModule implements IXposedHookLoadPackage {
-
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
         try {
             String pkg = lpparam.packageName;
-            // 只匹配微信、支付宝
-            if ("com.tencent.mm".equals(pkg)
-                    || "com.eg.android.AlipayGphone".equals(pkg)) {
-                // 完全空逻辑，不写任何日志、不Hook
+            if ("com.tencent.mm".equals(pkg) || "com.eg.android.AlipayGphone".equals(pkg)) {
+                // 空逻辑，只让 LSPosed 识别到模块
             }
-        } catch (Throwable ignored) {
-            // 静默捕获所有异常，绝不闪退、不崩LSP
-        }
+        } catch (Throwable ignored) {}
     }
 }
