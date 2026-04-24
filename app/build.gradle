@@ -16,8 +16,8 @@ android {
         // 应用包名（必须和你在AndroidManifest.xml里的一致）
         applicationId "com.lbxq.screen"
 
-        // 最低兼容系统版本：Android 8.0（API 26）
-        minSdk 26
+        // 最低兼容系统版本：Android 10.0（API 29）
+        minSdk 29
 
         // 目标系统版本：Android 15（API 35）
         targetSdk 35
@@ -25,7 +25,7 @@ android {
         // 版本号（必须是整数，用于系统识别更新）
         versionCode 1
         // 版本名（字符串，给用户看的）
-        versionName "1.0.0"
+        versionName "1.0.8"
     } 
 
     // 构建类型：release（发布版）和debug（调试版）的配置
