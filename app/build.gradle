@@ -66,5 +66,10 @@ dependencies {
     compileOnly 'de.robv.android.xposed:api-sdk:82'
 
     // AndroidX AppCompat 依赖，用来支持你的MainActivity和AndroidX特性
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    // AndroidX AppCompat，强制排除重复的Kotlin标准库
+    implementation 'androidx.appcompat:appcompat:1.7.0'{
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+        exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+    }
 }
