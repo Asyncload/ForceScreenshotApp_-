@@ -4,6 +4,10 @@ name: Build APK
 on:
   workflow_dispatch:
 
+# 关键：授予写入权限，才能提交代码
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -32,11 +36,9 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      # ------------------- 关键修改点 -------------------
-      # 6. 【合并清理+构建】仅执行一次，避免重复构建
+      # 6. 构建Release APK
       - name: Build Release APK
         run: ./gradlew clean assembleRelease --no-build-cache
-      # -------------------------------------------------
 
       # --- 签名流程开始 ---
       # 7. 生成临时签名密钥
@@ -57,21 +59,47 @@ jobs:
             app/build/outputs/apk/release/app-release-unsigned.apk \
             myalias
 
-      # 9. 自定义APK文件名
-      - name: Rename APK
+      # 9. 版本自动+0.0.1 + 改写配置 + 自动提交 + 重命名APK
+      - name: 版本自增 + 重命名APK
         run: |
-          VERSION=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+          # 配置Git用户
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "actions@github.com"
+          
+          # 读取旧版本号
+          OLD_VER=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d '"')
+          
+          # 分割 主.次.补丁
+          V1=$(echo $OLD_VER | cut -d'.' -f1)
+          V2=$(echo $OLD_VER | cut -d'.' -f2)
+          V3=$(echo $OLD_VER | cut -d'.' -f3)
+          
+          # 补丁号 +1
+          V3=$((V3 + 1))
+          NEW_VER="${V1}.${V2}.${V3}"
+          
+          # 写入新版本号到 build.gradle
+          sed -i "s/versionName = \".*\"/versionName = \"${NEW_VER}\"/g" app/build.gradle
+
+          # 日期 + 带冒号时间
           DATE=$(date +%Y-%m-%d)
           TIME=$(date +%H:%M:%S)
           
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          # 导出环境变量
+          echo "VERSION=$NEW_VER" >> $GITHUB_ENV
           echo "DATE=$DATE" >> $GITHUB_ENV
           echo "BUILD_TIME=$TIME" >> $GITHUB_ENV
           
-          NEW_NAME="X-screen_v${VERSION}_${DATE}.apk"
+          # 重命名APK
+          NEW_NAME="X-screen_v${NEW_VER}_${DATE}.apk"
           mv app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/$NEW_NAME
           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
-      
+
+          # 自动提交推送版本修改，[skip ci] 避免无限循环
+          git add app/build.gradle
+          git commit -m "chore: auto bump version to ${NEW_VER} [skip ci]"
+          git push
+
       # 10. 发布到GitHub Release
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
