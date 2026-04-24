@@ -25,7 +25,9 @@ android {
         // 版本号（数字，用于系统识别更新）
         versionCode 1
         // 版本名（字符串，给用户看的）
-        versionName "1.0"
+        versionName "1.0.0"
+        // 自定义 APK 文件名（不带 .apk 后缀）
+        archivesName = "Xscreen_{versionName}"
     }
 
     // 构建类型：release（发布版）和debug（调试版）的配置
