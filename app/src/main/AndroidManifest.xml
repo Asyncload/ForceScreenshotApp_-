@@ -6,7 +6,7 @@
     android:value="强制截图模块" />
 <meta-data
     android:name="xposedminversion"
-    android:value="82" />
+    android:value="101" />
 <meta-data
     android:name="xposed_init"
     android:value="com.lbxq.screen.XscreenModule" />
