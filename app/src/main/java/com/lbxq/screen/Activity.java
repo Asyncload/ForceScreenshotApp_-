@@ -8,7 +8,7 @@ import android.widget.Button;
 import android.widget.Toast;
 
 // 主界面，用于启动截图服务
-public class Activity extends Activity {
+public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
