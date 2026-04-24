@@ -33,19 +33,23 @@
             </intent-filter>
         </service>
 
-        <!-- ✅ LSPosed必须的4行配置，已经写全了，不用改 -->
+        <!-- ========== 修复后 LSPosed 标准配置 ========== -->
         <meta-data
-            android:name="de.robv.android.xposed.module"
-            android:value="on" />
+            android:name="xposedmodule"
+            android:value="true" />
+
         <meta-data
             android:name="xposeddescription"
             android:value="强制截图模块" />
+
         <meta-data
             android:name="xposedminversion"
-            android:value="101" />
+            android:value="82" />
+
         <meta-data
-            android:name="xposedmodule"
+            android:name="xposed_init"
             android:value="com.lbxq.screen.XscreenModule" />
+        <!-- =========================================== -->
 
     </application>
 
