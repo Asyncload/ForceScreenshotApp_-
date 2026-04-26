@@ -111,8 +111,8 @@ jobs:
           
       - name: All kinds of data variables
         run: 
-          DATE= $(date +%Y-%m-%d)
-          TIME= $(date +%H:%M:%S)
+          DATE=$(date +%Y-%m-%d)
+          TIME=$(date +%H:%M:%S)
 
           echo "VERSION=$NEW_VER" >> $GITHUB_ENV
           echo "DATE=$DATE" >> $GITHUB_ENV
