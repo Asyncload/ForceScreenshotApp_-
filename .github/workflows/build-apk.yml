@@ -30,11 +30,12 @@ jobs:
         run: chmod +x gradlew
 
       # ==============================================
-      # 【前置】自增版本号 → 写入app/build.gradle
+      # 自增版本号并写入 build.gradle + 保存到环境变量
       # ==============================================
-      - name: Update the version number
+      - name: Update version number
+        id: version_update
         run: |
-          echo "📝 build.gradle.kts中versionName行原始内容："
+          echo "📝 build.gradle 中 versionName 行原始内容："
           grep versionName app/build.gradle
 
           OLD_VER=$(grep versionName app/build.gradle | awk '{print $NF}' | tr -d '"' | tr -d "'")
@@ -63,19 +64,38 @@ jobs:
             echo "❗ 版本号写入失败！当前文件中的值: $UPDATED_VER"
             exit 1
           fi
-          echo "✅ 版本号已成功写入build.gradle"
+          echo "✅ 版本号已成功写入 build.gradle"
 
-      # 正常编译（现在编译用的是【新版本号】）& 并清除缓存
-      - name: Build Release APK
+          # 关键：将新版本号保存到环境变量，供后续步骤使用
+          echo "NEW_VER=$NEW_VER" >> $GITHUB_ENV
+
+      # ==============================================
+      # 生成日期时间变量（提前，供重命名APK使用）
+      # ==============================================
+      - name: Generate datetime environment variables
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          TIME=$(date +%H:%M:%S)
+          echo "DATE=$DATE" >> $GITHUB_ENV
+          echo "BUILD_TIME=$TIME" >> $GITHUB_ENV
+          echo "✅ 日期时间已设置: $DATE $TIME"
+
+      # ==============================================
+      # 正常编译
+      # ==============================================
+      - name: Build Release APK (unsigned)
         run: ./gradlew clean assembleRelease --no-build-cache
 
-      - name: signature key
+      # ==============================================
+      # 签名（使用临时密钥，仅演示；生产环境建议固定密钥并存储在 Secrets 中）
+      # ==============================================
+      - name: Generate keystore for signing
         run: |
           keytool -genkey -v -keystore my-release-key.jks -keyalg RSA -keysize 2048 -validity 10000 \
-          -alias myalias -storepass password789 -keypass password789 \
-          -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
+            -alias myalias -storepass password789 -keypass password789 \
+            -dname "CN=Unknown, OU=Unknown, O=Unknown, L=Unknown, S=Unknown, C=Unknown"
 
-      - name: jarsigner signature APK
+      - name: Sign APK with jarsigner
         run: |
           jarsigner -verbose \
             -keystore my-release-key.jks \
@@ -86,40 +106,36 @@ jobs:
             myalias
 
       # ==============================================
-      # 【后置】只保留：清理 + 重命名APK + 提交代码
+      # 重命名 APK + 提交版本变更 + 设置 APK_FILE 环境变量
       # ==============================================
-      - name: Modify apk name + automatically push code
+      - name: Rename APK and push version change
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "actions@github.com"
 
+          # 清理临时文件
           git checkout -- gradlew
           rm -rf .gradle/ build/ my-release-key.jks
 
-          NEW_NAME="X-screen_v${VERSION}_${DATE}.apk"
+          # 重命名 APK，使用从环境变量获取的版本号和日期
+          NEW_NAME="X-screen_v${{ env.NEW_VER }}_${{ env.DATE }}.apk"
           mv app/build/outputs/apk/release/app-release-signed.apk app/build/outputs/apk/release/$NEW_NAME
           echo "APK_FILE=app/build/outputs/apk/release/$NEW_NAME" >> $GITHUB_ENV
+          echo "✅ APK 已重命名为: $NEW_NAME"
 
+          # 提交版本号变更
           git add app/build.gradle
           if ! git diff --cached --quiet; then
-            git commit -m "chore: 自动迭代版本至 ${VERSION} [skip ci]"
+            git commit -m "chore: 自动迭代版本至 ${{ env.NEW_VER }} [skip ci]"
             git push
-            echo "✅ 版本号变更已提交并推送至仓库"
+            echo "✅ 版本号变更已提交并推送"
           else
             echo "⚠️ 无版本号变更，跳过提交"
-          fi  
-          
-      - name: All kinds of data variables
-        run: 
-          DATE=$(date +%Y-%m-%d)
-          TIME=$(date +%H:%M:%S)
+          fi
 
-          echo "VERSION=$NEW_VER" >> $GITHUB_ENV
-          echo "DATE=$DATE" >> $GITHUB_ENV
-          echo "BUILD_TIME=$TIME" >> $GITHUB_ENV
-
-
-
+      # ==============================================
+      # 生成 Changelog（基于 Commit 消息）
+      # ==============================================
       - name: Build Changelog
         id: changelog
         uses: mikepenz/release-changelog-builder-action@v5
@@ -127,30 +143,34 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           commitMode: true
 
+      # ==============================================
+      # 拼接完整的 Release Body（自定义内容 + Changelog）
+      # ==============================================
       - name: Build Full Release Body
-        id: build_boby
-        run: | 
-           FULL_BODY='## 自定义内容
-           ✅ 编译完成！ 🎉🎉🎉
-            📱 应用版本: v_${{ env.VERSION }}
-            📅 编译时间: ${{ env.DATE }} ${{ env.BUILD_TIME }}
-            📦 构建编号: ${ github.run_number }
-            🛠️ 功能: 解除某些APP屏蔽了截图权限。
+        id: build_body
+        run: |
+          FULL_BODY='## 自定义内容
+          ✅ 编译完成！ 🎉🎉🎉
+          📱 应用版本: v_${{ env.NEW_VER }}
+          📅 编译时间: ${{ env.DATE }} ${{ env.BUILD_TIME }}
+          📦 构建编号: ${{ github.run_number }}
+          🛠️ 功能: 解除某些APP屏蔽了截图权限。
 
-           ${{ steps.changelog.outputs.changelog }}'
-  
-           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-           echo "full_body<<$EOF" >> $GITHUB_OUTPUT
-           echo "$FULL_BODY" >> $GITHUB_OUTPUT
-           echo "$EOF" >> $GITHUB_OUTPUT
-    
+          ${{ steps.changelog.outputs.changelog }}'
 
-      #发布apk文件
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          echo "full_body<<$EOF" >> $GITHUB_OUTPUT
+          echo "$FULL_BODY" >> $GITHUB_OUTPUT
+          echo "$EOF" >> $GITHUB_OUTPUT
+
+      # ==============================================
+      # 发布 Release 并上传 APK
+      # ==============================================
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
         with:
-          name: "X-screen_v_${ github.run_number } (v_${{ env.VERSION }})"
+          name: "X-screen_v${{ github.run_number }} (v_${{ env.NEW_VER }})"
           files: ${{ env.APK_FILE }}
-          tag_name: "v_${{ env.VERSION }}"
+          tag_name: "v_${{ env.NEW_VER }}"
           body: ${{ steps.build_body.outputs.full_body }}
           overwrite_files: true
