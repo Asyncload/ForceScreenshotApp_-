@@ -132,8 +132,8 @@ jobs:
         run: | 
            FULL_BODY='## 自定义内容
            ✅ 编译完成！ 🎉🎉🎉
-            📱 应用版本: v_${ env.VERSION }
-            📅 编译时间: ${ env.DATE } ${ env.BUILD_TIME }
+            📱 应用版本: v_${{ env.VERSION }}
+            📅 编译时间: ${{ env.DATE }} ${{ env.BUILD_TIME }}
             📦 构建编号: ${ github.run_number }
             🛠️ 功能: 解除某些APP屏蔽了截图权限。
 
@@ -150,7 +150,7 @@ jobs:
         uses: softprops/action-gh-release@v6
         with:
           name: X-screen-v${{ github.run_number }} (v${ env.VERSION })
-          files: ${ env.APK_FILE }
-          tag_name: "v${ env.VERSION }"
-          body:  ${ steps.build_body.outputs.full_body }
+          files: ${{ env.APK_FILE }}
+          tag_name: "v_${{ env.VERSION }}"
+          body: ${{ steps.build_body.outputs.full_body }}
           overwrite_files: true
