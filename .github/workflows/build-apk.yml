@@ -95,10 +95,13 @@ jobs:
         uses: r0adkll/sign-android-release@v1
         with:
            releaseDirectory: app/build/outputs/apk/release
-           signingKeyBase64: ${{ secrets.XSCREEN_JKS }}
+           signingKeyBase64: ${{ secrets.XCREEN_JKS }}
            alias: ${{ secrets.ALIAS }}
            keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
            keyPassword: ${{ secrets.KEYSTORE_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
+        
 
       # ==============================================
       # 重命名 APK + 提交版本变更 + 设置 APK_FILE 环境变量
