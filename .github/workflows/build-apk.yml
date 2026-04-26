@@ -149,7 +149,7 @@ jobs:
       - name: Upload Release APK
         uses: softprops/action-gh-release@v2
         with:
-          name: X-screen-v${{ github.run_number }} (v${ env.VERSION })
+          name: X-screen_v_${{ github.run_number }} (v${{ env.VERSION }})
           files: ${{ env.APK_FILE }}
           tag_name: "v_${{ env.VERSION }}"
           body: ${{ steps.build_body.outputs.full_body }}
