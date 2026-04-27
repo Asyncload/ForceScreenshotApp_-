@@ -102,39 +102,7 @@ jobs:
         id: commits
         run: |
           LAST_COMMIT="${{ steps.last_commit.outputs.last_commit }}"
-          if [ -n "$LAST_COMMIT" ]; then
-            python3 << 'EOF'
-            import subprocess, os, base64
-            commits = subprocess.check_output(
-                ["git", "log", "--reverse", "--format=%H", f"{LAST_COMMIT}..HEAD"],
-                text=True
-            ).strip().split()
-            entries = []
-            for c in commits:
-                msg = subprocess.check_output(["git", "show", "-s", "--format=%B", c], text=True).strip()
-                lines = msg.splitlines()
-                if len(lines) <= 1:
-                    continue
-                title = lines[0].strip()
-                body_lines = [line.rstrip() for line in lines[1:] if line.strip()]
-                if not body_lines:
-                    continue
-                entry = f"- {title}"
-                for line in body_lines:
-                    entry += f"\n  {line}"
-                entries.append(entry)
-            if entries:
-                print("has_commits=true")
-                delim = base64.b64encode(os.urandom(15)).decode()
-                print(f"commit_messages<<{delim}")
-                print("\n\n".join(entries))
-                print(delim)
-            else:
-                print("has_commits=false")
-            EOF
-          else
-            echo "has_commits=false" >> $GITHUB_OUTPUT
-          fi
+          python3 .github/scripts/extract_commits.py "$LAST_COMMIT"
 
       # 拼接 Release body
       - name: Build release body
