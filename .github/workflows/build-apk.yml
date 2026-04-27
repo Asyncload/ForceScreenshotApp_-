@@ -61,7 +61,7 @@ jobs:
       - name: Decode keystore
         run: echo "${{ secrets.XCREEN_JKS }}" | base64 -d > my-release-key.jks
 
-      # zipalign对齐 + apksigner签名（解决jarsigner兼容问题，支持V1/V2/V3签名）
+      # zipalign对齐 + apksigner签名（解决Tag number over 30兼容问题）
       - name: Align & Sign APK
         run: |
           # 先定义所有变量（必须放在最前面！）
@@ -77,9 +77,10 @@ jobs:
           # 1. 对齐APK（优化文件结构，提升运行效率）
           "$BUILD_TOOLS/zipalign" -v -p 4 "$UNSIGNED" "$ALIGNED"
           
-          # 2. 使用官方apksigner签名（完美兼容PKCS12格式，自动支持安全算法）
+          # 2. 使用官方apksigner签名（强制指定PKCS12类型，添加兼容参数）
           "$BUILD_TOOLS/apksigner" sign \
             --ks my-release-key.jks \
+            --ks-type PKCS12 \
             --ks-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
             --ks-key-alias ${{ secrets.ALIAS }} \
             --key-pass pass:${{ secrets.KEYSTORE_PASSWORD }} \
@@ -90,6 +91,10 @@ jobs:
           
           # 清理临时密钥文件
           rm -f my-release-key.jks
+        # 关键：强制启用旧版PKCS12兼容模式，解决Tag number错误
+        env:
+          JAVA_TOOL_OPTIONS: "-Dkeystore.pkcs12.legacy"
+
       # 重命名APK + 提交版本号变更并推送
       - name: Rename APK & commit version
         run: |
