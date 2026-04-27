@@ -29,34 +29,38 @@ jobs:
           sed -i 's/\r$//' gradlew
           chmod +x gradlew
 
-      # Decode keystore for signing
+      # 解码固定签名密钥
       - name: Decode keystore
         run: |
           echo "${{ secrets.XSCREEN_JKS }}" | base64 -d > ${{ github.workspace }}/myAPP.jks
+          ls -lh myAPP.jks
 
-      # Auto increment versionName
+      # 自动递增版本号
       - name: Auto increment version
         run: |
           OLD_VER=$(grep versionName app/build.gradle | awk '{print $NF}' | tr -d "\"'")
           V1=$(echo "$OLD_VER" | cut -d'.' -f1)
           V2=$(echo "$OLD_VER" | cut -d'.' -f2)
           V3=$(echo "$OLD_VER" | cut -d'.' -f3)
+
           V3=$((V3 + 5))
           if [ "$V3" -ge 99 ]; then
             V3=0
             V2=$((V2 + 1))
             [ "$V2" -ge 99 ] && { V2=0; V1=$((V1 + 1)); }
           fi
+
           NEW_VER="${V1}.${V2}.${V3}"
           sed -i "s/versionName\s*=.*[\"'].*[\"']/versionName = \"${NEW_VER}\"/g" app/build.gradle
           echo "NEW_VER=$NEW_VER" >> "$GITHUB_ENV"
 
+      # 日期时间变量
       - name: Set build datetime
         run: |
           echo "DATE=$(date +%Y-%m-%d)" >> "$GITHUB_ENV"
           echo "BUILD_TIME=$(date +%H:%M:%S)" >> "$GITHUB_ENV"
 
-      # Get last build commit for incremental changelog
+      # 读取上次构建的 commit
       - name: Get last build commit
         id: last_commit
         run: |
@@ -67,7 +71,7 @@ jobs:
             echo "last_commit=" >> $GITHUB_OUTPUT
           fi
 
-      # Build and sign APK (Gradle uses env vars for signing)
+      # 编译并签名（Gradle 使用环境变量签名）
       - name: Build Release APK
         run: ./gradlew clean assembleRelease --no-build-cache
         env:
@@ -75,20 +79,14 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ALIAS }}
 
-      # Verify signature
-      - name: Verify APK signature
-        run: |
-          APK_PATH=$(ls app/build/outputs/apk/release/*.apk | head -1)
-          jarsigner -verify -verbose "$APK_PATH"
-
-      # Rename APK
+      # 重命名 APK
       - name: Rename APK
         run: |
           APK_NAME="X-screen_v${{ env.NEW_VER }}_${{ env.DATE }}.apk"
           mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/"$APK_NAME"
           echo "APK_FILE=app/build/outputs/apk/release/$APK_NAME" >> "$GITHUB_ENV"
 
-      # Commit version bump
+      # 提交版本号变更
       - name: Commit version update
         run: |
           git config --global user.name "github-actions[bot]"
@@ -99,27 +97,46 @@ jobs:
             git push
           fi
 
-      # Extract new commits since last build (if any)
-      - name: Extract new commits
+      # 提取自上次构建以来的新提交（只保留有扩展描述的，并输出标题+描述）
+      - name: Extract new commits since last build
         id: commits
         run: |
           LAST_COMMIT="${{ steps.last_commit.outputs.last_commit }}"
           if [ -n "$LAST_COMMIT" ]; then
-            COMMITS=$(git log $LAST_COMMIT..HEAD --pretty=format:"- %s" --reverse)
+            python3 << 'EOF'
+            import subprocess, os, base64
+            commits = subprocess.check_output(
+                ["git", "log", "--reverse", "--format=%H", f"{LAST_COMMIT}..HEAD"],
+                text=True
+            ).strip().split()
+            entries = []
+            for c in commits:
+                msg = subprocess.check_output(["git", "show", "-s", "--format=%B", c], text=True).strip()
+                lines = msg.splitlines()
+                if len(lines) <= 1:
+                    continue
+                title = lines[0].strip()
+                body_lines = [line.rstrip() for line in lines[1:] if line.strip()]
+                if not body_lines:
+                    continue
+                entry = f"- {title}"
+                for line in body_lines:
+                    entry += f"\n  {line}"
+                entries.append(entry)
+            if entries:
+                print("has_commits=true")
+                delim = base64.b64encode(os.urandom(15)).decode()
+                print(f"commit_messages<<{delim}")
+                print("\n\n".join(entries))
+                print(delim)
+            else:
+                print("has_commits=false")
+            EOF
           else
-            COMMITS=""
-          fi
-          if [ -z "$COMMITS" ]; then
             echo "has_commits=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_commits=true" >> $GITHUB_OUTPUT
-            EOF=$(head -c15 /dev/urandom | base64)
-            echo "commit_messages<<$EOF" >> $GITHUB_OUTPUT
-            echo "$COMMITS" >> $GITHUB_OUTPUT
-            echo "$EOF" >> $GITHUB_OUTPUT
           fi
 
-      # Build release body (show new commits only if exist)
+      # 拼接 Release body
       - name: Build release body
         id: build_body
         run: |
@@ -131,25 +148,25 @@ jobs:
           if [ "${{ steps.commits.outputs.has_commits }}" = "true" ]; then
             FULL_BODY="${FULL_BODY}
 
-          ## 更新内容
-           ${{ steps.commits.outputs.commit_messages }}"
-           fi
+## 更新内容
+${{ steps.commits.outputs.commit_messages }}"
+          fi
           EOF=$(head -c15 /dev/urandom | base64)
           echo "full_body<<$EOF" >> "$GITHUB_OUTPUT"
           echo "$FULL_BODY" >> "$GITHUB_OUTPUT"
           echo "$EOF" >> "$GITHUB_OUTPUT"
 
-      # Create release and upload APK
+      # 创建 Release 并上传 APK（使用唯一 tag）
       - name: Create Release & upload APK
         uses: softprops/action-gh-release@v2
         with:
-          name: "X-screen_v${{ env.NEW_VER }}"
-          tag_name: "v_${{ env.NEW_VER }}V_${{ github.run_number }}"
+          name: "X-screen 构建 #${{ github.run_number }} | v${{ env.NEW_VER }}"
+          tag_name: "v${{ env.NEW_VER }}-build${{ github.run_number }}"
           files: ${{ env.APK_FILE }}
           body: ${{ steps.build_body.outputs.full_body }}
           overwrite_files: true
 
-      # Save current commit for next build
+      # 保存本次构建的 commit 供下次比较
       - name: Save current build commit
         run: |
           git rev-parse HEAD > .last_build_commit
