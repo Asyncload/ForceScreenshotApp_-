@@ -28,18 +28,13 @@ public class XscreenModule implements IXposedHookLoadPackage {
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) {
         String pkg = lpparam.packageName;
-        // 获取中文名称，如果不在映射中则返回包名本身
-        String appName = PACKAGE_NAMES.getOrDefault(pkg, pkg);
-
-        // 目标应用列表
         if (!PACKAGE_NAMES.containsKey(pkg)) {
             return;
         }
+        String appName = PACKAGE_NAMES.get(pkg);
+        XposedBridge.log("[Xscreen] 已检测到: " + appName + " (" + pkg + ") 启动");
 
-        // 启动检测日志（带中文名）
-        XposedBridge.log("[Xscreen] 已检测到: " + appName + " (" + pkg + ")启动，测试完成✅");
-
-        // Hook setFlags 移除 FLAG_SECURE
+        // 1. Hook setFlags (同时处理 flags 和 mask)
         XposedHelpers.findAndHookMethod(
             "android.view.Window",
             lpparam.classLoader,
@@ -49,10 +44,42 @@ public class XscreenModule implements IXposedHookLoadPackage {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) {
                     int flags = (int) param.args[0];
+                    int mask = (int) param.args[1];
+                    boolean modified = false;
+
+                    // 如果 flags 中包含 FLAG_SECURE，则清除
                     if ((flags & WindowManager.LayoutParams.FLAG_SECURE) != 0) {
-                        param.args[0] = flags & ~WindowManager.LayoutParams.FLAG_SECURE;
-                        // 解除截图限制日志（带中文名）
-                        XposedBridge.log("[Xscreen] : " + appName + " (" + pkg + ")已被提取权限，任务完成！🎉");
+                        flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+                        param.args[0] = flags;
+                        modified = true;
+                    }
+                    // 确保 mask 包含 FLAG_SECURE，以便清除生效
+                    if ((mask & WindowManager.LayoutParams.FLAG_SECURE) == 0) {
+                        mask |= WindowManager.LayoutParams.FLAG_SECURE;
+                        param.args[1] = mask;
+                        modified = true;
+                    }
+                    if (modified) {
+                        XposedBridge.log("[Xscreen] 已解除 " + appName + " 的截图限制 (setFlags)");
+                    }
+                }
+            }
+        );
+
+        // 2. Hook addFlags (只传入一个 flags 参数)
+        XposedHelpers.findAndHookMethod(
+            "android.view.Window",
+            lpparam.classLoader,
+            "addFlags",
+            int.class,
+            new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) {
+                    int flags = (int) param.args[0];
+                    if ((flags & WindowManager.LayoutParams.FLAG_SECURE) != 0) {
+                        flags &= ~WindowManager.LayoutParams.FLAG_SECURE;
+                        param.args[0] = flags;
+                        XposedBridge.log("[Xscreen] 已解除 " + appName + " 的截图限制 (addFlags)");
                     }
                 }
             }
